@@ -1,19 +1,49 @@
 import 'dotenv/config';
-import Database from 'better-sqlite3';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
+import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { Pool } from 'pg';
 import * as schema from './schema';
 
-const globalForDb = globalThis as unknown as {
-  sqlite: Database.Database | undefined;
+const globalForDatabase = globalThis as typeof globalThis & {
+  __eduSpherePool?: Pool;
+  __eduSphereDb?: NodePgDatabase<typeof schema>;
 };
 
-const sqlite =
-  globalForDb.sqlite ?? new Database(process.env.DATABASE_URL?.replace(/^file:/, '') ?? './dev.db');
+export function getPool(): Pool {
+  if (globalForDatabase.__eduSpherePool) {
+    return globalForDatabase.__eduSpherePool;
+  }
 
-if (process.env.NODE_ENV !== 'production') globalForDb.sqlite = sqlite;
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) {
+    throw new Error('DATABASE_URL must be set before accessing the database.');
+  }
 
-sqlite.pragma('journal_mode = WAL');
-sqlite.pragma('foreign_keys = ON');
+  const pool = new Pool({
+    connectionString,
+    ssl: false,
+    max: 10,
+    idleTimeoutMillis: 30_000,
+    connectionTimeoutMillis: 5_000,
+  });
 
-export const db = drizzle(sqlite, { schema });
+  if (process.env.NODE_ENV !== 'production') {
+    globalForDatabase.__eduSpherePool = pool;
+  }
+
+  return pool;
+}
+
+export function getDatabase(): NodePgDatabase<typeof schema> {
+  if (globalForDatabase.__eduSphereDb) {
+    return globalForDatabase.__eduSphereDb;
+  }
+
+  const database = drizzle(getPool(), { schema });
+  if (process.env.NODE_ENV !== 'production') {
+    globalForDatabase.__eduSphereDb = database;
+  }
+
+  return database;
+}
+
 export { schema };

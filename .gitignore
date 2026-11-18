@@ -53,3 +53,6 @@ isolate-*.log
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# managed preview runtime state and logs
+/.revolte/runtime/

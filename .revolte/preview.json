@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "start": "npx next dev --turbopack --hostname 0.0.0.0 --port 4173",
+  "start": "(pg_ctlcluster 14 main start || pg_isready -h 127.0.0.1 -p 5432) && DATABASE_URL='postgresql:///edusphere_dev?host=/var/run/postgresql' npm run db:migrate && DATABASE_URL='postgresql:///edusphere_dev?host=/var/run/postgresql' npx next dev --turbopack --hostname 0.0.0.0 --port 4173",
   "port": 4173,
   "install": [
     {
